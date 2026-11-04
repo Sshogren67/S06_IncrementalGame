@@ -124,6 +124,27 @@ body {
   border-radius: 40%;
 }
 
+/* A hired archer's arrow flying in toward a target. */
+.arrow {
+  position: absolute;
+  pointer-events: none;
+  width: 34px;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, #8a6435 85%, #d4a017 100%);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.45);
+}
+
+/* The floating "+N hits" note that rises from the range each second. */
+.float-hits {
+  position: absolute;
+  pointer-events: none;
+  color: #ffe9a8;
+  font-size: 0.95rem;
+  text-shadow: 1px 1px 2px #000;
+  white-space: nowrap;
+}
+
 /* ---------- The shop ---------- */
 
 #shop {
