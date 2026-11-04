@@ -68,7 +68,7 @@ function spawnParticles(x: number, y: number, count: number): void {
 
 /** Jump a target to a random spot inside the range. */
 function teleportTarget(target: HTMLImageElement, delayMs: number): void {
-  window.setTimeout(() => {
+  setTimeout(() => {
     const width = arena.clientWidth - target.offsetWidth;
     const height = arena.clientHeight - target.offsetHeight;
     target.style.left = `${Math.random() * Math.max(width, 0)}px`;
