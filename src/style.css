@@ -1,0 +1,193 @@
+/*
+ * Ye Olde Archery Range — a medieval village and castle theme.
+ * The whole scene is painted with gradients and one small inline
+ * SVG castle silhouette, so the game ships no image files for scenery.
+ */
+
+:root {
+  --wood-dark: #2e2114;
+  --wood: #5b3f22;
+  --wood-light: #8a6435;
+  --parchment: #e8d9b5;
+  --parchment-dark: #c9b384;
+  --ink: #3a2a12;
+  --gold: #d4a017;
+  --red: #a3282d;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: "Palatino Linotype", Palatino, Georgia, serif;
+  color: #f0e4c0;
+  overflow: hidden;
+  /* Dusk sky fading to a golden horizon, with towers rising from it and
+     a strip of meadow grass along the bottom of the screen. */
+  background:
+    /* grass */
+    linear-gradient(to bottom, rgba(46, 74, 38, 0) 0%, #243d1e 22%, #182a14
+    100%) no-repeat,
+    /* castle silhouette (inline SVG, reused at three sizes) */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 420 180'%3E%3Cg fill='%23221522'%3E%3Crect x='0' y='70' width='20' height='110'/%3E%3Crect x='26' y='84' width='16' height='96'/%3E%3Crect x='48' y='96' width='60' height='84'/%3E%3Crect x='114' y='58' width='26' height='122'/%3E%3Crect x='146' y='88' width='70' height='92'/%3E%3Crect x='222' y='44' width='30' height='136'/%3E%3Crect x='258' y='90' width='66' height='90'/%3E%3Crect x='330' y='66' width='24' height='114'/%3E%3Crect x='360' y='92' width='60' height='88'/%3E%3Crect x='380' y='76' width='18' height='104'/%3E%3Cpolygon points='114,58 152,58 127,22'/%3E%3Cpolygon points='222,44 258,44 240,4'/%3E%3Cpolygon points='330,66 354,66 342,28'/%3E%3C/g%3E%3C/svg%3E")
+    repeat-x bottom / 640px 274px no-repeat,
+    /* sky */
+    linear-gradient(to bottom, #17203d 0%, #33406b 30%, #6b4f63 60%, #b07850
+    84%, #caa54f 100%);
+}
+
+/* ---------- Page frame ---------- */
+
+#app {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "masthead masthead"
+    "range shop";
+}
+
+#masthead {
+  grid-area: masthead;
+  background: linear-gradient(to bottom, var(--wood-dark), var(--wood));
+  border-bottom: 3px solid var(--gold);
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.55);
+}
+
+#masthead h1 {
+  font-size: 1.7rem;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  text-shadow: 1px 2px 2px #000;
+}
+
+#hits-label {
+  font-size: 1.25rem;
+}
+
+#hits {
+  font-weight: bold;
+  color: #ffe9a8;
+}
+
+/* ---------- The range where targets fly ---------- */
+
+#arena {
+  grid-area: range;
+  position: relative;
+  overflow: hidden;
+}
+
+.target {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  cursor: crosshair;
+  user-select: none;
+  filter: drop-shadow(4px 6px 6px rgba(0, 0, 0, 0.5));
+  transition:
+    left 0.18s ease-out,
+    top 0.18s ease-out,
+    transform 0.09s ease-out;
+}
+
+/* Brief squash when the target is struck, before it teleports away. */
+.target.struck {
+  transform: scale(0.88);
+}
+
+/* ---------- Impact particles ---------- */
+
+.particle {
+  position: absolute;
+  pointer-events: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 40%;
+}
+
+/* ---------- The shop ---------- */
+
+#shop {
+  grid-area: shop;
+  background:
+    linear-gradient(
+    to right,
+    rgba(58, 42, 18, 0.65),
+    rgba(58, 42, 18, 0.9)
+  ),
+    repeating-linear-gradient(
+    90deg,
+    var(--parchment) 0px,
+    var(--parchment) 26px,
+    var(--parchment-dark) 27px,
+    var(--parchment) 28px
+  );
+  border-left: 3px solid var(--gold);
+  color: var(--ink);
+  padding: 16px;
+  overflow-y: auto;
+}
+
+#shop h2 {
+  color: var(--wood-dark);
+  text-align: center;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid var(--wood);
+  padding-bottom: 6px;
+  margin-bottom: 12px;
+}
+
+.upgrade {
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  display: block;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  background: linear-gradient(to bottom, #7b5730, var(--wood));
+  color: var(--parchment);
+  border: 2px solid var(--wood-dark);
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.4);
+}
+
+.upgrade:hover:not(:disabled) {
+  background: linear-gradient(to bottom, #926636, #6b4a26);
+}
+
+.upgrade:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.6);
+}
+
+.upgrade .upgrade-name {
+  font-weight: bold;
+  color: #ffe9a8;
+}
+
+.upgrade .upgrade-desc {
+  font-size: 0.85rem;
+  display: block;
+  opacity: 0.9;
+}
+
+.upgrade .upgrade-cost {
+  float: right;
+  color: var(--gold);
+}
