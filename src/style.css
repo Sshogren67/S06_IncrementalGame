@@ -83,6 +83,11 @@ body {
   color: #ffe9a8;
 }
 
+#hps {
+  color: #cdb377;
+  font-size: 0.9em;
+}
+
 /* ---------- The range where targets fly ---------- */
 
 #arena {

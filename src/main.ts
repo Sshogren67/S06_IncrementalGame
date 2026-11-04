@@ -8,12 +8,42 @@ import targetUrl from "./assets/target.svg?no-inline";
 import arrowUrl from "./assets/arrow.mp3?no-inline";
 
 const hitsText = document.querySelector<HTMLSpanElement>("#hits")!;
+const hpsText = document.querySelector<HTMLSpanElement>("#hps")!;
 const arena = document.querySelector<HTMLDivElement>("#arena")!;
+const shop = document.querySelector<HTMLElement>("#shop")!;
+
+type Upgrade = {
+  name: string;
+  description: string;
+  baseCost: number;
+  costGrowth: number;
+  hitsPerSecond: number;
+  owned: number;
+  /** The shop row built from this upgrade, kept here for easy refresh. */
+  button?: HTMLButtonElement;
+};
 
 // The core state of the game. Hits are both the score and the money.
-const state = { hits: 0 };
+const state = { hits: 0, hitsPerSecond: 0 };
 
 const hitsPerShot = 1;
+
+/** One upgrade: an arrow-shooting helper that costs hits and earns more. */
+const fletchersApprentice: Upgrade = {
+  name: "Fletcher's Apprentice",
+  description: "Shoots 0.2 extra hits per second for you.",
+  baseCost: 15,
+  costGrowth: 1.15,
+  hitsPerSecond: 0.2,
+  owned: 0,
+};
+
+/** The current price of an upgrade, rising with every one already bought. */
+function upgradeCost(upgrade: Upgrade): number {
+  return Math.ceil(upgrade.baseCost * upgrade.costGrowth ** upgrade.owned);
+}
+
+// ---------- Sound and particles ----------
 
 // The same thwack of an arrow the student's D1 project used.
 const hitSound = new Audio(arrowUrl);
@@ -66,6 +96,8 @@ function spawnParticles(x: number, y: number, count: number): void {
   }
 }
 
+// ---------- Targets ----------
+
 /** Jump a target to a random spot inside the range. */
 function teleportTarget(target: HTMLImageElement, delayMs: number): void {
   setTimeout(() => {
@@ -107,7 +139,75 @@ function makeTarget(): HTMLImageElement {
 
 makeTarget();
 
+// ---------- The shop ----------
+
+function makeUpgradeRow(upgrade: Upgrade): HTMLButtonElement {
+  const row = document.createElement("button");
+  row.type = "button";
+  row.className = "upgrade";
+
+  const name = document.createElement("span");
+  name.className = "upgrade-name";
+  name.textContent = upgrade.name;
+
+  const cost = document.createElement("span");
+  cost.className = "upgrade-cost";
+
+  const description = document.createElement("span");
+  description.className = "upgrade-desc";
+  description.textContent = upgrade.description;
+
+  const ownedLine = document.createElement("span");
+  ownedLine.className = "upgrade-desc owned";
+  ownedLine.textContent = "Hired: 0";
+
+  row.append(name, cost, description, ownedLine);
+  shop.append(row);
+
+  row.addEventListener("click", () => {
+    const price = upgradeCost(upgrade);
+    if (state.hits < price) return;
+    state.hits -= price;
+    upgrade.owned += 1;
+    state.hitsPerSecond += upgrade.hitsPerSecond;
+    renderShop();
+    render();
+  });
+
+  upgrade.button = row;
+  return row;
+}
+
+/** Refresh the shop so prices, owned counts and affordability stay true. */
+function renderShop(): void {
+  for (const upgrade of [fletchersApprentice]) {
+    const row = upgrade.button;
+    if (!row) continue;
+    const price = upgradeCost(upgrade);
+    row.querySelector(".upgrade-cost")!.textContent = `${price} hits`;
+    row.querySelector(".owned")!.textContent = `Hired: ${upgrade.owned}`;
+    row.disabled = state.hits < price;
+  }
+}
+
+makeUpgradeRow(fletchersApprentice);
+
+// ---------- The game loop ----------
+
 /** Refresh every part of the page that shows state. */
 function render(): void {
   hitsText.textContent = String(Math.floor(state.hits));
+  hpsText.textContent = state.hitsPerSecond.toFixed(1);
 }
+
+let lastTick = performance.now();
+function tick(now: number): void {
+  const dt = (now - lastTick) / 1000;
+  lastTick = now;
+  state.hits += state.hitsPerSecond * dt;
+  renderShop();
+  render();
+  requestAnimationFrame(tick);
+}
+
+tick(performance.now());
