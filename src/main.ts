@@ -7,74 +7,17 @@ import targetUrl from "./assets/target.svg?no-inline";
 // @deno-types="./asset-url.d.ts"
 import arrowUrl from "./assets/arrow.mp3?no-inline";
 
+import { type Upgrade, upgradeCost, UPGRADES } from "./upgrades.ts";
+
 const hitsText = document.querySelector<HTMLSpanElement>("#hits")!;
 const hpsText = document.querySelector<HTMLSpanElement>("#hps")!;
 const arena = document.querySelector<HTMLDivElement>("#arena")!;
 const shop = document.querySelector<HTMLElement>("#shop")!;
 
-type Upgrade = {
-  name: string;
-  description: string;
-  baseCost: number;
-  costGrowth: number;
-  hitsPerSecond: number;
-  owned: number;
-  /** The shop row built from this upgrade, kept here for easy refresh. */
-  button?: HTMLButtonElement;
-};
-
-const upgrades: Upgrade[] = [
-  {
-    name: "Fletcher's Apprentice",
-    description: "Shoots 0.2 extra hits per second for you.",
-    baseCost: 15,
-    costGrowth: 1.15,
-    hitsPerSecond: 0.2,
-    owned: 0,
-  },
-  {
-    name: "Longbowman",
-    description: "Shoots 1 extra hit per second for you.",
-    baseCost: 100,
-    costGrowth: 1.15,
-    hitsPerSecond: 1,
-    owned: 0,
-  },
-  {
-    name: "Crossbow Company",
-    description: "Shoots 8 extra hits per second for you.",
-    baseCost: 1_000,
-    costGrowth: 1.15,
-    hitsPerSecond: 8,
-    owned: 0,
-  },
-  {
-    name: "Ballista Crew",
-    description: "Shoots 40 extra hits per second for you.",
-    baseCost: 12_000,
-    costGrowth: 1.15,
-    hitsPerSecond: 40,
-    owned: 0,
-  },
-  {
-    name: "Royal Archer Order",
-    description: "Shoots 250 extra hits per second for you.",
-    baseCost: 150_000,
-    costGrowth: 1.15,
-    hitsPerSecond: 250,
-    owned: 0,
-  },
-];
-
 // The core state of the game. Hits are both the score and the money.
 const state = { hits: 0, hitsPerSecond: 0 };
 
 const hitsPerShot = 1;
-
-/** The current price of an upgrade, rising with every one already bought. */
-function upgradeCost(upgrade: Upgrade): number {
-  return Math.ceil(upgrade.baseCost * upgrade.costGrowth ** upgrade.owned);
-}
 
 // ---------- Sound and particles ----------
 
@@ -162,6 +105,10 @@ function spawnFloatingHits(x: number, y: number, amount: number): void {
 
 const targets: HTMLImageElement[] = [];
 
+function randomTarget(): HTMLImageElement {
+  return targets[Math.floor(Math.random() * targets.length)];
+}
+
 /** Jump a target to a random spot inside the range. */
 function teleportTarget(target: HTMLImageElement, delayMs: number): void {
   setTimeout(() => {
@@ -171,6 +118,14 @@ function teleportTarget(target: HTMLImageElement, delayMs: number): void {
     target.style.top = `${Math.random() * Math.max(height, 0)}px`;
     target.classList.remove("struck");
   }, delayMs);
+}
+
+/** Where a target's current centre sits, in arena coordinates. */
+function targetCentre(target: HTMLImageElement): { x: number; y: number } {
+  return {
+    x: target.offsetLeft + target.offsetWidth / 2,
+    y: target.offsetTop + target.offsetHeight / 2,
+  };
 }
 
 /** One archery target that can be shot and that teleports when struck. */
@@ -193,11 +148,7 @@ function makeTarget(): HTMLImageElement {
 }
 
 /** Path coordinates of an arrow flying in from a random screen edge. */
-function incomingArrowPath(): {
-  ox: number;
-  oy: number;
-  angle: number;
-} {
+function incomingArrowPath(): { ox: number; oy: number; angle: number } {
   const edge = Math.floor(Math.random() * 4);
   const w = arena.clientWidth;
   const h = arena.clientHeight;
@@ -216,22 +167,15 @@ function incomingArrowPath(): {
 /** Show an arrow flying from the screen edge into the target's centre. */
 function shootTarget(target: HTMLImageElement): void {
   const path = incomingArrowPath();
-  const aim = {
-    x: target.offsetLeft + target.offsetWidth / 2,
-    y: target.offsetTop + target.offsetHeight / 2,
-  };
+  const aim = targetCentre(target);
   const dx = aim.x - path.ox;
   const dy = aim.y - path.oy;
-  const duration = Math.min(
-    450,
-    Math.max(160, Math.hypot(dx, dy) * 0.7),
-  );
+  const duration = Math.min(450, Math.max(160, Math.hypot(dx, dy) * 0.7));
 
   const arrow = document.createElement("span");
   arrow.className = "arrow";
   arrow.style.left = `${path.ox}px`;
   arrow.style.top = `${path.oy}px`;
-  arrow.style.transform = `rotate(${path.angle}deg)`;
   arena.append(arrow);
 
   arrow.animate(
@@ -246,7 +190,7 @@ function shootTarget(target: HTMLImageElement): void {
   };
 }
 
-/** Reward a made shot and make the struck target teleport away. */
+/** Score a hit and make the struck target teleport away. */
 function strikeTarget(
   target: HTMLImageElement,
   point: { x: number; y: number },
@@ -261,6 +205,14 @@ function strikeTarget(
 makeTarget();
 
 // ---------- The shop ----------
+
+const rows = new Map<Upgrade, HTMLButtonElement>();
+
+/** What the "owned" line reads for each upgrade kind. */
+const OWNED_LABELS: Record<string, string> = {
+  archer: "Hired",
+  target: "In the range",
+};
 
 function makeUpgradeRow(upgrade: Upgrade): HTMLButtonElement {
   const row = document.createElement("button");
@@ -280,35 +232,49 @@ function makeUpgradeRow(upgrade: Upgrade): HTMLButtonElement {
 
   const ownedLine = document.createElement("span");
   ownedLine.className = "upgrade-desc owned";
-  ownedLine.textContent = "Hired: 0";
 
   row.append(name, cost, description, ownedLine);
   shop.append(row);
 
+  // The click handler is the same for every kind of upgrade: the kind only
+  // decides what the effect step below does.
   row.addEventListener("click", () => {
     const price = upgradeCost(upgrade);
     if (state.hits < price) return;
     state.hits -= price;
     upgrade.owned += 1;
-    state.hitsPerSecond += upgrade.hitsPerSecond;
+    applyUpgrade(upgrade);
     renderShop();
     render();
   });
 
-  upgrade.button = row;
+  rows.set(upgrade, row);
   return row;
 }
 
-for (const upgrade of upgrades) makeUpgradeRow(upgrade);
+/** Perform whatever an upgrade is for, based on its kind. */
+function applyUpgrade(upgrade: Upgrade): void {
+  switch (upgrade.kind) {
+    case "archer":
+      state.hitsPerSecond += upgrade.hitsPerSecond ?? 0;
+      break;
+    case "target":
+      makeTarget();
+      break;
+  }
+}
+
+for (const upgrade of UPGRADES) makeUpgradeRow(upgrade);
 
 /** Refresh the shop so prices, owned counts and affordability stay true. */
 function renderShop(): void {
-  for (const upgrade of upgrades) {
-    const row = upgrade.button;
-    if (!row) continue;
+  for (const upgrade of UPGRADES) {
+    const row = rows.get(upgrade)!;
     const price = upgradeCost(upgrade);
     row.querySelector(".upgrade-cost")!.textContent = `${price} hits`;
-    row.querySelector(".owned")!.textContent = `Hired: ${upgrade.owned}`;
+    row.querySelector(".owned")!.textContent = `${
+      OWNED_LABELS[upgrade.kind]
+    }: ${upgrade.owned}`;
     row.disabled = state.hits < price;
   }
 }
@@ -335,12 +301,14 @@ function tick(now: number): void {
     autoTimer += dt;
     if (autoTimer >= 1000) {
       autoTimer -= 1000;
+      const target = randomTarget();
+      const centre = targetCentre(target);
       spawnFloatingHits(
-        (arena.clientWidth - 90) * Math.random(),
-        (arena.clientHeight - 60) * Math.random(),
+        centre.x,
+        Math.max(centre.y - 60, 0),
         state.hits - before + state.hitsPerSecond,
       );
-      shootTarget(targets[0]);
+      shootTarget(target);
     }
   }
 
