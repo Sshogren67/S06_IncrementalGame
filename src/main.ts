@@ -88,7 +88,7 @@ function spawnParticles(x: number, y: number, count: number): void {
 function spawnFloatingHits(x: number, y: number, amount: number): void {
   const note = document.createElement("span");
   note.className = "float-hits";
-  note.textContent = `+${Math.floor(amount)} hits`;
+  note.textContent = `+${Math.floor(amount).toLocaleString("en-US")} hits`;
   note.style.left = `${x}px`;
   note.style.top = `${y}px`;
   arena.append(note);
@@ -143,6 +143,7 @@ function makeTarget(): HTMLImageElement {
     strikeTarget(target, arenaPoint(event.clientX, event.clientY), true);
     state.hits += hitsPerShot;
     render();
+    renderShop();
   });
   return target;
 }
@@ -265,13 +266,16 @@ function applyUpgrade(upgrade: Upgrade): void {
 }
 
 for (const upgrade of UPGRADES) makeUpgradeRow(upgrade);
+renderShop();
 
 /** Refresh the shop so prices, owned counts and affordability stay true. */
 function renderShop(): void {
   for (const upgrade of UPGRADES) {
     const row = rows.get(upgrade)!;
     const price = upgradeCost(upgrade);
-    row.querySelector(".upgrade-cost")!.textContent = `${price} hits`;
+    row.querySelector(".upgrade-cost")!.textContent = `${
+      price.toLocaleString("en-US")
+    } hits`;
     row.querySelector(".owned")!.textContent = `${
       OWNED_LABELS[upgrade.kind]
     }: ${upgrade.owned}`;
@@ -283,9 +287,14 @@ function renderShop(): void {
 
 let autoTimer = 0;
 
+/** Format a number with thousands separators for display. */
+function format(number: number): string {
+  return Math.floor(number).toLocaleString("en-US");
+}
+
 /** Refresh every part of the page that shows state. */
 function render(): void {
-  hitsText.textContent = String(Math.floor(state.hits));
+  hitsText.textContent = format(state.hits);
   hpsText.textContent = state.hitsPerSecond.toFixed(1);
 }
 
