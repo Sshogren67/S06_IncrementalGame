@@ -140,12 +140,26 @@ function makeTarget(): HTMLImageElement {
   targets.push(target);
 
   target.addEventListener("pointerdown", (event) => {
-    strikeTarget(target, arenaPoint(event.clientX, event.clientY), true);
+    rewardTarget(arenaPoint(event.clientX, event.clientY), true);
+
+    // Only the player's hits make the target flee to a new spot.
+    target.classList.add("struck");
+    teleportTarget(target, 110);
+
     state.hits += hitsPerShot;
     render();
     renderShop();
   });
   return target;
+}
+
+/** Show the impact of a hit: sound and a burst of splinters. */
+function rewardTarget(
+  point: { x: number; y: number },
+  byPlayer: boolean,
+): void {
+  playHitSound(byPlayer ? hitSound : autoHitSound);
+  spawnParticles(point.x, point.y, byPlayer ? 14 : 10);
 }
 
 /** Path coordinates of an arrow flying in from a random screen edge. */
@@ -187,20 +201,9 @@ function shootTarget(target: HTMLImageElement): void {
     { duration, easing: "linear", fill: "forwards" },
   ).onfinish = () => {
     arrow.remove();
-    strikeTarget(target, aim, false);
+    // Hired archers only land the hit; the target stays put for them.
+    rewardTarget(aim, false);
   };
-}
-
-/** Score a hit and make the struck target teleport away. */
-function strikeTarget(
-  target: HTMLImageElement,
-  point: { x: number; y: number },
-  byPlayer: boolean,
-): void {
-  playHitSound(byPlayer ? hitSound : autoHitSound);
-  spawnParticles(point.x, point.y, byPlayer ? 14 : 10);
-  target.classList.add("struck");
-  teleportTarget(target, byPlayer ? 110 : 150);
 }
 
 makeTarget();

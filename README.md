@@ -7,7 +7,8 @@ TypeScript, Vite, and hand-drawn CSS scenery.
 ## How to play
 
 - Click the round archery target. Every hit earns one hit of currency.
-- Targets teleport across the range when struck, so keep aiming.
+- Targets teleport across the range when _you_ strike them, so keep
+  aiming. Arrows from hired archers land on the spot and don't move them.
 - Spend your hits in the Quartermaster's shop:
 
 | Upgrade               | Effect              | First price | Price growth   |
@@ -49,7 +50,8 @@ deno task ci      # fmt + lint + typecheck + build (runs on every commit)
 - **Step 4 — the upgrade lineup.** The lone upgrade becomes five ascending
   archery hires, from apprentice to the Royal Archer Order. Every second
   with income flowing, an arrow visibly flies in from a random screen edge
-  and strikes a target, plus a floating "+N hits" note to show the earnings.
+  and strikes a target without moving it, plus a floating "+N hits" note
+  to show the earnings.
 - **Step 5 — data-driven design.** The upgrade system stops being a list
   of hard-coded handlers: `src/upgrades.ts` declares each upgrade as pure
   data (name, kind, base cost, cost growth), and one generic purchase
